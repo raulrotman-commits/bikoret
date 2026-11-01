@@ -5,7 +5,7 @@
   "description": "רוטמן בטיחות — דוח ביקור בטיחות באתרי בנייה",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "concurrently -k -n server,client \"tsx watch server/index.ts\" \"vite\"",
@@ -63,5 +63,6 @@
     "onlyBuiltDependencies": [
       "esbuild"
     ]
-  }
+  },
+  "packageManager": "pnpm@10.28.0"
 }
