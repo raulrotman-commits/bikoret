@@ -22,6 +22,11 @@ export async function confirmPayment(lowProfileId: string) {
   const [p] = await db.select().from(schema.payments).where(eq(schema.payments.lowProfileId, lowProfileId)).limit(1);
   if (!p || p.status === "paid") return p?.status === "paid";
   const r = await getResult(lowProfileId);
+  // סכום העסקה חייב להתאים למה שביקשנו
+  if (r.ok && r.amount != null && Math.abs(Number(r.amount) - Number(p.amount)) > 0.01) {
+    await db.update(schema.payments).set({ status: "failed", raw: JSON.stringify(r.raw) }).where(eq(schema.payments.id, p.id));
+    return false;
+  }
   if (!r.ok) {
     await db.update(schema.payments).set({ raw: JSON.stringify(r.raw) }).where(eq(schema.payments.id, p.id));
     return false;

@@ -31,15 +31,14 @@ export async function createPaymentPage(a: CreateArgs): Promise<{ lowProfileId: 
     Language: "he",
     ISOCoinId: 1,
   };
-  if (env.CARDCOM_DOCUMENT_TYPE) {
-    body.Document = {
-      DocumentTypeToCreate: env.CARDCOM_DOCUMENT_TYPE,
-      Name: a.customerName || a.customerEmail,
-      Email: a.customerEmail,
-      IsSendByEmail: true,
-      Products: [{ Description: a.productName, UnitCost: a.amount, Quantity: 1 }],
-    };
-  }
+  // אותו מבנה מסמך שעובד בשומר תוקף; סוג המסמך נקבע בהגדרות המסוף, אלא אם הוגדר במפורש
+  const doc: Record<string, unknown> = {
+    To: a.customerName || a.customerEmail,
+    Email: a.customerEmail,
+    Products: [{ Description: a.productName, UnitCost: a.amount, Quantity: 1 }],
+  };
+  if (env.CARDCOM_DOCUMENT_TYPE) doc.DocumentTypeToCreate = env.CARDCOM_DOCUMENT_TYPE;
+  body.Document = doc;
   const res = await fetch(`${BASE}/LowProfile/Create`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -67,6 +66,13 @@ export async function getResult(lowProfileId: string) {
     Description?: string;
     ReturnValue?: string;
     TranzactionId?: number;
+    TranzactionInfo?: { ResponseCode?: number; Amount?: number };
   };
-  return { ok: data.ResponseCode === 0 && Boolean(data.TranzactionId), raw: data };
+  const tx = data.TranzactionInfo;
+  return {
+    ok: data.ResponseCode === 0 && Boolean(data.TranzactionId) && (tx?.ResponseCode ?? 0) === 0,
+    amount: tx?.Amount,
+    returnValue: data.ReturnValue,
+    raw: data,
+  };
 }
