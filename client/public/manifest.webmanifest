@@ -1,0 +1,18 @@
+{
+  "name": "ביקורת שטח | רוטמן בטיחות",
+  "short_name": "ביקורת שטח",
+  "description": "דוח ביקור בטיחות באתר בנייה: ליקויים לפי התקנות, הערכת סיכון, תמונות ושיתוף",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4F6FA",
+  "theme_color": "#0D2153",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
