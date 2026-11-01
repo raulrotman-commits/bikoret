@@ -67,7 +67,10 @@ const sheet = () => page.locator(".fixed.inset-0");
 const first = sheet().locator("button.card").filter({ hasText: "גידור" }).first();
 await first.click();
 await page.getByRole("button", { name: /סבירות 3, חומרה 4/ }).click();
-await page.getByLabel("העבודה הקשורה בסיכון הופסקה").check();
+await page.getByLabel(/הוריתי על הפסקת העבודה|העבודה הקשורה בסיכון הופסקה/).check();
+// ממונה על הבטיחות שהורה על הפסקה מסיבה שבתוספת הראשונה: חובה להודיע למפקח העבודה האזורי
+await page.getByLabel("הסיבה להפסקה לפי התוספת הראשונה").selectOption("4");
+log("regulator box shown:", await page.getByText("חובה להודיע למפקח העבודה האזורי").first().isVisible());
 await page.getByPlaceholder("קומה, אגף, ציר").fill("קומה 4, אגף מזרח");
 await page.getByPlaceholder("מה ראית, מה נדרש לעשות").fill("קצה תקרה פתוח באורך 12 מ׳, עובדים בסביבה בלי ריתום.");
 await page.locator('input[type=file][capture]').setInputFiles("client/public/icon-512.png");
@@ -75,6 +78,16 @@ await page.waitForTimeout(1200);
 await shot(page, "07-finding-sheet");
 await page.getByRole("button", { name: "סיום" }).click();
 log("finding 1 added");
+// בעורך: התראה שעוד לא דווח למפקח העבודה, ומשם מסמנים שנשלח
+const banner = page.getByRole("button", { name: /חובה להודיע למפקח העבודה האזורי/ });
+log("editor banner before notifying:", await banner.isVisible());
+await shot(page, "07b-editor-regulator-banner");
+await banner.click();
+await page.getByRole("button", { name: "שלחתי את הטופס למפקח העבודה האזורי" }).click();
+log("marked notified:", await page.getByText(/✓ נשלחה הודעה למפקח העבודה האזורי/).isVisible());
+await shot(page, "07c-finding-notified");
+await page.getByRole("button", { name: "סיום" }).click();
+log("editor banner after notifying:", await banner.isVisible());
 
 // ממצאים מהערות שטח
 await page.getByRole("button", { name: "＋ הוספת ממצא" }).click();
@@ -122,6 +135,8 @@ await shot(page, "12-report-owner");
 const reportText = await page.locator("article").innerText();
 log("report has 'סיכונים שאינם קבילים':", reportText.includes("סיכונים שאינם קבילים"));
 log("report has source line:", /מקור: (תקנה|תקנות)/.test(reportText));
+log("report has stop reason 4:", reportText.includes("סיבה 4 בתוספת הראשונה"));
+log("report has regulator notice:", reportText.includes("נשלחה הודעה למפקח העבודה האזורי"));
 
 // קישור ציבורי
 const shareUrl = await page.evaluate(async () => {

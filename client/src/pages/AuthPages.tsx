@@ -71,7 +71,7 @@ export function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const utils = trpc.useUtils();
-  const plans = trpc.billing.plans.useQuery();
+  const info = trpc.billing.info.useQuery();
   const next = useNext();
   const [, nav] = useLocation();
   const m = trpc.account.signup.useMutation({
@@ -83,7 +83,7 @@ export function SignupPage() {
   return (
     <Shell title="פתיחת חשבון">
       <p className="mb-4 text-[14px] text-navy-600">
-        {plans.data?.trialDays ?? 14} ימי ניסיון בלי התחייבות. אחר כך ממשיכים במנוי.
+        {info.data?.trialDays ?? 14} ימי ניסיון בלי התחייבות. ביקורת שטח כלולה במנוי רוטמן בטיחות — מנויים נרשמים עם אותו מייל של המנוי, והגישה נפתחת מיד.
       </p>
       <form
         onSubmit={(e) => {

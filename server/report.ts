@@ -63,6 +63,8 @@ export async function buildReport(visit: Visit, opts: { publicToken?: string } =
       score: riskScore(f.likelihood, f.severity),
       level,
       workStopped: f.workStopped,
+      stopReason: f.workStopped ? (f.stopReason ?? null) : null,
+      regulatorNotifiedAt: f.workStopped && f.stopReason ? (f.regulatorNotifiedAt ?? null) : null,
       deadline,
       carried: Boolean(f.carriedFromId),
       followStatus: (f.followStatus as "open" | "fixed" | null) ?? null,

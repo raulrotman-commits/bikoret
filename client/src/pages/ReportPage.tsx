@@ -6,6 +6,10 @@ import { heDate, clsx } from "../lib/format";
 import type { ReportData, ReportFinding } from "@shared/visit-types";
 import { RISK_LEVEL_LABELS, describeThresholds } from "@shared/risk";
 import { loadLocal, saveLocal } from "../lib/visitStore";
+import { BAKAR_SOURCE, MAZMIN_48H_SOURCE, STOP_REASONS, STOP_SOURCE, isSafetyController, isSafetyOfficer } from "@shared/stopReasons";
+
+const sentTime = (iso: string) =>
+  new Date(iso).toLocaleString("he-IL", { timeZone: "Asia/Jerusalem", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
 export function OwnerReportPage({ id }: { id: string }) {
   const q = trpc.visits.report.useQuery({ id });
@@ -45,6 +49,14 @@ export function OwnerReportPage({ id }: { id: string }) {
     <>
       <TopBar title="הדוח" sub={r.site.name} back="/" />
       <div className="no-print mx-auto max-w-3xl px-3 pt-4">
+        {isSafetyOfficer(r.visit.authorRole) && r.findings.some((f) => f.stopReason && !f.regulatorNotifiedAt) && (
+          <div className="mb-3 rounded-2xl bg-danger-500 px-4 py-3 text-white">
+            <div className="text-[15px] font-extrabold">חובה להודיע למפקח העבודה האזורי</div>
+            <div className="text-[13px] opacity-95">
+              בדוח יש הפסקת עבודה מסיבה שבתוספת הראשונה, ועדיין לא סומן שהטופס המקוון נשלח. מסמנים בממצא עצמו, בעריכת הביקור.
+            </div>
+          </div>
+        )}
         {r.visit.status !== "final" ? (
           <div className="mb-3 rounded-2xl bg-gold-50 px-4 py-3 text-[14px] font-bold text-navy-800 ring-1 ring-gold-300">
             זו תצוגה מקדימה של טיוטה. <Link href={`/visit/${id}`} className="underline">חזרה לעריכה</Link>
@@ -199,10 +211,23 @@ function Report({ r }: { r: ReportData }) {
             {unacceptable.map((f) => (
               <li key={f.id}>
                 ממצא {f.n}: {f.title}
-                {f.workStopped && " — העבודה הקשורה בסיכון הופסקה"}
+                {f.workStopped && (isSafetyOfficer(r.visit.authorRole) ? " — הממונה על הבטיחות הורה על הפסקת העבודה הקשורה בסיכון" : " — העבודה הקשורה בסיכון הופסקה")}
+                {f.stopReason && ` (סיבה ${f.stopReason} בתוספת הראשונה)`}
+                {f.regulatorNotifiedAt && ` — נשלחה הודעה למפקח העבודה האזורי, ${sentTime(f.regulatorNotifiedAt)}`}
               </li>
             ))}
           </ul>
+          {isSafetyController(r.visit.authorRole) && (
+            <p className="mt-2 text-[12px] leading-relaxed text-[#8E1B1B]">
+              על סיכון שאינו קביל מדווח בקר הבטיחות מיד, בכתב, למזמין, למבצע הבנייה, למנהל האתר ולמנהל העבודה ({BAKAR_SOURCE}). המזמין יאשר בכתב, לא יאוחר
+              מ-48 שעות ממועד הדיווח, כי ניתן מענה לסיכון, ואישורו יימסר למבצע הבנייה ({MAZMIN_48H_SOURCE}).
+            </p>
+          )}
+          {isSafetyOfficer(r.visit.authorRole) && unacceptable.some((f) => f.stopReason) && (
+            <p className="mt-2 text-[12px] leading-relaxed text-[#8E1B1B]">
+              הפסקת עבודה מסיבה שבתוספת הראשונה: הממונה על הבטיחות מדווח מיד למנהל העבודה, לבקר הבטיחות ולמנהל האתר, ומודיע למפקח העבודה האזורי בטופס המקוון ({STOP_SOURCE}).
+            </p>
+          )}
         </section>
       )}
 
@@ -304,6 +329,13 @@ function FindingBlock({ f, color }: { f: ReportFinding; color: string }) {
             {f.location && ` · מיקום: ${f.location}`}
           </div>
           {f.source && <div className="mt-1 text-[12px] font-bold text-[#13286A]">מקור: {f.source}</div>}
+          {f.stopReason && (
+            <div className="mt-1.5 rounded-lg bg-[#FDECEC] px-2.5 py-1.5 text-[12px] leading-relaxed text-[#8E1B1B]">
+              <span className="font-extrabold">סיבת הפסקת העבודה (סיבה {f.stopReason} בתוספת הראשונה): </span>
+              {STOP_REASONS[f.stopReason]}
+              {f.regulatorNotifiedAt && <div className="font-bold">נשלחה הודעה למפקח העבודה האזורי: {sentTime(f.regulatorNotifiedAt)}</div>}
+            </div>
+          )}
           {f.note && <p className="mt-1.5 whitespace-pre-wrap text-[13px] leading-relaxed">{f.note}</p>}
         </div>
       </div>

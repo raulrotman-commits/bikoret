@@ -13,12 +13,14 @@ export function AccessBanner() {
   if (!a.active)
     return (
       <div className="mb-4 rounded-2xl bg-danger-500 px-4 py-3 text-white">
-        <div className="text-[15px] font-extrabold">תקופת הניסיון הסתיימה</div>
-        <div className="text-[13px] opacity-90">הדוחות הקיימים זמינים לצפייה ולשיתוף. כדי ליצור דוחות חדשים יש לחדש מנוי.</div>
-        <Link href="/billing" className="btn mt-2 bg-white text-danger-700">לחידוש מנוי</Link>
+        <div className="text-[15px] font-extrabold">אין מנוי פעיל</div>
+        <div className="text-[13px] opacity-90">
+          ביקורת שטח כלולה במנוי רוטמן בטיחות. הדוחות הקיימים זמינים לצפייה ולשיתוף; כדי ליצור דוחות חדשים צריך מנוי.
+        </div>
+        <Link href="/billing" className="btn mt-2 bg-white text-danger-700">למנוי רוטמן בטיחות</Link>
       </div>
     );
-  if (!a.admin && !a.paid)
+  if (a.via === "trial")
     return (
       <Link href="/billing" className="mb-4 flex items-center justify-between rounded-2xl bg-gold-50 px-4 py-3 text-navy-800 ring-1 ring-gold-300">
         <span className="text-[14px] font-bold">תקופת ניסיון: נותרו {a.trialLeft} ימים</span>

@@ -10,9 +10,9 @@ import { appRouter } from "./routers";
 import { createContext } from "./trpc";
 import { env, isProd } from "./env";
 import { db, pool, schema } from "./db";
-import { userFromRequest, accessOf } from "./auth";
+import { userFromRequest, accessFor } from "./auth";
+import { rsSelfCheck } from "./rs";
 import { getObject, putObject } from "./storage";
-import { confirmPayment } from "./routers/billing";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -35,7 +35,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 app.post("/api/photos", upload.single("file"), async (req, res) => {
   const user = await userFromRequest(req);
   if (!user) return res.status(401).json({ error: "יש להתחבר" });
-  if (!accessOf(user).active) return res.status(403).json({ error: "המנוי אינו פעיל" });
+  if (!(await accessFor(user)).active) return res.status(403).json({ error: "אין מנוי פעיל" });
   const { id, findingId, visitId } = req.body as Record<string, string>;
   if (!req.file || !UUID.test(id ?? "") || !UUID.test(findingId ?? "") || !UUID.test(visitId ?? "")) {
     return res.status(400).json({ error: "בקשה לא תקינה" });
@@ -109,20 +109,6 @@ app.get("/api/logo/:userId", async (req, res) => {
   res.end(obj.body);
 });
 
-/** Cardcom קורא לכאן אחרי תשלום. לא סומכים על הגוף — מאמתים מול GetLpResult. */
-app.post("/api/cardcom/webhook", express.json(), express.urlencoded({ extended: true }), async (req, res) => {
-  const body = (req.body ?? {}) as Record<string, unknown>;
-  const lp = String(body.LowProfileId ?? body.lowprofilecode ?? req.query.lowprofilecode ?? "");
-  if (lp) {
-    try {
-      await confirmPayment(lp);
-    } catch (e) {
-      console.error("[cardcom] confirm failed", e);
-    }
-  }
-  res.json({ ok: true });
-});
-
 app.use(
   "/api/trpc",
   express.json({ limit: "2mb" }),
@@ -157,4 +143,5 @@ if (isProd && fs.existsSync(publicDir)) {
 
 app.listen(env.PORT, () => {
   console.log(`bikoret listening on :${env.PORT} (${env.NODE_ENV})`);
+  void rsSelfCheck();
 });

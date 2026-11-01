@@ -55,6 +55,8 @@ export default function NewVisitPage() {
               likelihood: f.likelihood,
               severity: f.severity,
               workStopped: false,
+              stopReason: null,
+              regulatorNotifiedAt: null,
               deadlineDays: null,
               carriedFromId: f.id,
               followStatus: "open",

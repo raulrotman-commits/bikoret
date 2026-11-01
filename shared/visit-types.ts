@@ -11,6 +11,8 @@ export const findingInput = z.object({
   likelihood: z.number().int().min(1).max(4).nullable().optional(),
   severity: z.number().int().min(1).max(4).nullable().optional(),
   workStopped: z.boolean().default(false),
+  stopReason: z.number().int().min(1).max(11).nullable().optional(),
+  regulatorNotifiedAt: z.string().max(32).nullable().optional(),
   deadlineDays: z.number().int().min(0).max(365).nullable().optional(),
   carriedFromId: z.string().uuid().nullable().optional(),
   followStatus: z.enum(["open", "fixed"]).nullable().optional(),
@@ -56,6 +58,9 @@ export interface ReportFinding {
   score: number | null;
   level: "acceptable" | "approval" | "unacceptable" | null;
   workStopped: boolean;
+  /** סיבה לפי התוספת הראשונה, אם הממונה על הבטיחות הורה על הפסקת עבודה */
+  stopReason: number | null;
+  regulatorNotifiedAt: string | null;
   deadline: string | null;
   carried: boolean;
   followStatus: "open" | "fixed" | null;

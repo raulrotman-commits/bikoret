@@ -1,7 +1,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import superjson from "superjson";
-import { accessOf, userFromRequest } from "./auth";
+import { accessFor, isAdminUser, userFromRequest } from "./auth";
 
 export async function createContext({ req, res }: CreateExpressContextOptions) {
   const user = await userFromRequest(req);
@@ -21,14 +21,14 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
 });
 
 /** פעולות שדורשות מנוי פעיל או תקופת ניסיון */
-export const activeProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (!accessOf(ctx.user).active) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "תקופת הניסיון הסתיימה. כדי להמשיך, יש לחדש מנוי." });
+export const activeProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  if (!(await accessFor(ctx.user)).active) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "אין מנוי פעיל. ביקורת שטח כלולה במנוי רוטמן בטיחות." });
   }
   return next();
 });
 
 export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (!accessOf(ctx.user).admin) throw new TRPCError({ code: "FORBIDDEN", message: "אין הרשאה" });
+  if (!isAdminUser(ctx.user)) throw new TRPCError({ code: "FORBIDDEN", message: "אין הרשאה" });
   return next();
 });

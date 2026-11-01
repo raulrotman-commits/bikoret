@@ -10,6 +10,7 @@ import { FindingSheet } from "../components/FindingSheet";
 import { CatalogPicker } from "../components/CatalogPicker";
 import { clsx, heDate } from "../lib/format";
 import type { LocalFinding } from "../lib/visitStore";
+import { STOP_REASON_SHORT, isSafetyOfficer } from "@shared/stopReasons";
 
 const RECIPIENT_OPTIONS = ["המזמין", "מבצע הבנייה", "מנהל האתר", "מנהל העבודה", "ממונה הבטיחות", "בקר הבטיחות"];
 
@@ -67,6 +68,8 @@ export default function VisitEditorPage({ id }: { id: string }) {
     setFinalErr("");
     const unscored = lv.findings.filter((f) => !(f.carriedFromId && f.followStatus === "fixed") && (!f.likelihood || !f.severity));
     if (unscored.length && !confirm(`ל-${unscored.length} ממצאים אין הערכת סיכון. להפיק את הדוח בכל זאת?`)) return;
+    const unreported = isSafetyOfficer(lv.visit.authorRole) ? lv.findings.filter((f) => f.workStopped && f.stopReason && !f.regulatorNotifiedAt) : [];
+    if (unreported.length && !confirm("יש הפסקת עבודה מסיבה שבתוספת הראשונה, ועדיין לא סומן שנשלחה הודעה למפקח העבודה האזורי. להפיק את הדוח בכל זאת?")) return;
     if (!navigator.onLine) {
       setFinalErr("להפקת הדוח צריך חיבור לאינטרנט. הכול שמור במכשיר — אפשר להפיק כשתחזור הקליטה.");
       return;
@@ -136,6 +139,17 @@ export default function VisitEditorPage({ id }: { id: string }) {
 
         {tab === "findings" ? (
           <>
+            {isSafetyOfficer(v.authorRole) &&
+              lv.findings
+                .filter((f) => f.workStopped && f.stopReason && !f.regulatorNotifiedAt)
+                .map((f) => (
+                  <button key={f.id} onClick={() => setOpenId(f.id)} className="mb-3 block w-full rounded-2xl bg-danger-500 px-4 py-3 text-right text-white">
+                    <div className="text-[15px] font-extrabold">חובה להודיע למפקח העבודה האזורי</div>
+                    <div className="text-[13px] opacity-95">
+                      הוריתי על הפסקת עבודה: {STOP_REASON_SHORT[f.stopReason!]}. עדיין לא סומן שהטופס המקוון נשלח. ←
+                    </div>
+                  </button>
+                ))}
             {carried.length > 0 && (
               <section className="mb-5">
                 <h2 className="mb-1 text-[15px] font-extrabold text-navy-800">מהביקור הקודם — לבדוק בעיניים אם תוקן</h2>
@@ -196,6 +210,14 @@ export default function VisitEditorPage({ id }: { id: string }) {
 
       {open && (
         <FindingSheet
+          authorRole={v.authorRole}
+          stopContext={{
+            siteName: site.data?.name ?? lv.siteSnap?.name ?? "",
+            address: site.data?.address ?? "",
+            contractor: site.data?.contractor ?? "",
+            authorName: v.authorName,
+            visitDate: v.visitDate,
+          }}
           finding={open}
           thresholds={thresholds}
           recentLocations={recentLocations}
@@ -230,6 +252,11 @@ function FindingRow({ f, thresholds, onOpen }: { f: LocalFinding; thresholds: Re
       <div className="mb-1 flex flex-wrap items-center gap-1.5">
         <RiskBadge level={level} score={riskScore(f.likelihood, f.severity)} small />
         {f.workStopped && <span className="rounded-full bg-navy-900 px-2 py-0.5 text-[11px] font-bold text-white">העבודה הופסקה</span>}
+        {f.workStopped && f.stopReason && (
+          <span className={clsx("rounded-full px-2 py-0.5 text-[11px] font-bold", f.regulatorNotifiedAt ? "bg-emerald-100 text-emerald-800" : "bg-danger-500 text-white")}>
+            {f.regulatorNotifiedAt ? "✓ דווח למפקח העבודה" : "לדווח למפקח העבודה"}
+          </span>
+        )}
         {f.photoIds.length > 0 && <span className="text-[12px] text-navy-500">📷 {f.photoIds.length}</span>}
       </div>
       <div className="text-[15px] font-bold leading-snug text-navy-900">{findingTitle(f)}</div>

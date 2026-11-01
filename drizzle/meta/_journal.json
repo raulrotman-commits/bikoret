@@ -8,6 +8,13 @@
       "when": 1793557298716,
       "tag": "0000_overconfident_spacker_dave",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1793563481452,
+      "tag": "0001_stop_reason",
+      "breakpoints": true
     }
   ]
 }

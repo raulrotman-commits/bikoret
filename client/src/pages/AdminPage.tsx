@@ -1,6 +1,7 @@
 import { trpc } from "../lib/trpc";
 import { Page, Spinner, TopBar } from "../components/ui";
 import { heDate } from "../lib/format";
+import { accessLabel } from "../lib/access";
 
 export default function AdminPage() {
   const users = trpc.admin.users.useQuery();
@@ -26,11 +27,11 @@ export default function AdminPage() {
                   <div className="text-left text-[12px]">
                     <div className="font-bold text-navy-700">{u.sites} אתרים · {u.visits} ביקורים</div>
                     <div className={u.access.active ? "font-bold text-emerald-700" : "font-bold text-danger-700"}>
-                      {u.access.admin ? "מנהל" : u.access.paid ? `עד ${heDate(u.access.paidUntil)}` : u.access.trialLeft ? `ניסיון ${u.access.trialLeft} ימים` : "לא פעיל"}
+                      {u.access.via === "none" ? "לא פעיל" : accessLabel(u.access, true)}
                     </div>
                   </div>
                 </div>
-                {!u.access.admin && (
+                {!u.access.admin && u.access.via !== "subscription" && (
                   <div className="mt-2 flex gap-2">
                     {[1, 12].map((m) => (
                       <button key={m} className="btn-ghost py-1.5 text-[12px]" disabled={extend.isPending} onClick={() => extend.mutate({ userId: u.id, months: m })}>

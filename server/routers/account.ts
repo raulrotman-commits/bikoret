@@ -4,7 +4,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db, schema } from "../db";
 import { router, publicProcedure, protectedProcedure } from "../trpc";
-import { checkPassword, clearSession, hashPassword, publicUser, setSession } from "../auth";
+import { accessFor, checkPassword, clearSession, hashPassword, publicUser, setSession } from "../auth";
 import { env } from "../env";
 import { resetEmailHtml, sendEmail } from "../email";
 import { AUTHOR_ROLES } from "../../shared/roles";
@@ -13,7 +13,7 @@ const email = z.string().trim().toLowerCase().email("כתובת מייל לא ת
 const password = z.string().min(8, "סיסמה של 8 תווים לפחות");
 
 export const accountRouter = router({
-  me: publicProcedure.query(({ ctx }) => (ctx.user ? publicUser(ctx.user) : null)),
+  me: publicProcedure.query(async ({ ctx }) => (ctx.user ? publicUser(ctx.user, await accessFor(ctx.user)) : null)),
 
   signup: publicProcedure
     .input(z.object({ email, password, fullName: z.string().trim().min(2, "שם מלא").max(120) }))
@@ -32,7 +32,7 @@ export const accountRouter = router({
       });
       setSession(ctx.res, Number(res.insertId));
       const [u] = await db.select().from(schema.users).where(eq(schema.users.id, Number(res.insertId))).limit(1);
-      return { me: publicUser(u) };
+      return { me: publicUser(u, await accessFor(u, true)) };
     }),
 
   login: publicProcedure.input(z.object({ email, password: z.string().min(1) })).mutation(async ({ input, ctx }) => {
@@ -41,7 +41,7 @@ export const accountRouter = router({
       throw new TRPCError({ code: "UNAUTHORIZED", message: "מייל או סיסמה שגויים" });
     }
     setSession(ctx.res, u.id);
-    return { me: publicUser(u) };
+    return { me: publicUser(u, await accessFor(u, true)) };
   }),
 
   logout: publicProcedure.mutation(({ ctx }) => {
@@ -71,7 +71,7 @@ export const accountRouter = router({
     await db.update(schema.passwordResets).set({ usedAt: new Date() }).where(eq(schema.passwordResets.token, input.token));
     setSession(ctx.res, r.userId);
     const [u] = await db.select().from(schema.users).where(eq(schema.users.id, r.userId)).limit(1);
-    return { me: publicUser(u) };
+    return { me: publicUser(u, await accessFor(u, true)) };
   }),
 
   updateProfile: protectedProcedure

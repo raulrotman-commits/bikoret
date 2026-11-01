@@ -145,6 +145,8 @@ export const visitsRouter = router({
         likelihood: f.likelihood ?? null,
         severity: f.severity ?? null,
         workStopped: f.workStopped,
+        stopReason: f.workStopped ? (f.stopReason ?? null) : null,
+        regulatorNotifiedAt: f.workStopped && f.stopReason ? (f.regulatorNotifiedAt ?? null) : null,
         deadlineDays: f.deadlineDays ?? null,
         carriedFromId: f.carriedFromId ?? null,
         recurring: !f.carriedFromId && f.catalogId != null && prevCatalog.has(f.catalogId),

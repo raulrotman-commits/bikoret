@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { trpc, errMsg } from "../lib/trpc";
 import { useAuth } from "../lib/auth";
+import { accessLabel } from "../lib/access";
 import { ErrorBox, Field, Page, TopBar } from "../components/ui";
 import { AUTHOR_ROLES } from "@shared/roles";
 
@@ -177,10 +178,8 @@ export default function SettingsPage() {
         {!welcome && (
           <div className="mt-6 space-y-2">
             <Link href="/billing" className="card flex items-center justify-between px-4 py-3">
-              <span className="font-bold text-navy-800">מנוי ותשלום</span>
-              <span className="text-[13px] text-navy-500">
-                {me?.access.admin ? "מנהל" : me?.access.paid ? `בתוקף עד ${new Date(me.access.paidUntil!).toLocaleDateString("he-IL")}` : `ניסיון: ${me?.access.trialLeft} ימים`}
-              </span>
+              <span className="font-bold text-navy-800">מנוי</span>
+              <span className="text-[13px] text-navy-500">{accessLabel(me?.access, true)}</span>
             </Link>
             <button className="btn-ghost w-full text-danger-700" onClick={() => logout.mutate()}>
               יציאה מהחשבון

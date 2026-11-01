@@ -24,14 +24,13 @@ export const env = {
   EMAIL_FROM: process.env.EMAIL_FROM ?? "רוטמן בטיחות <no-reply@rotmansafety.com>",
 
   TRIAL_DAYS: num(process.env.TRIAL_DAYS, 14),
-  PRICE_MONTHLY: num(process.env.PRICE_MONTHLY, 0),
-  PRICE_YEARLY: num(process.env.PRICE_YEARLY, 0),
-  CARDCOM_TERMINAL_NUMBER: process.env.CARDCOM_TERMINAL_NUMBER ?? "",
-  CARDCOM_API_NAME: process.env.CARDCOM_API_NAME ?? "",
-  CARDCOM_API_PASSWORD: process.env.CARDCOM_API_PASSWORD ?? "",
-  CARDCOM_DOCUMENT_TYPE: process.env.CARDCOM_DOCUMENT_TYPE ?? "",
+
+  /** מסד הנתונים של האתר הראשי (קריאה בלבד) — שם נמצא המנוי של רוטמן בטיחות */
+  RS_DATABASE_URL: process.env.RS_DATABASE_URL ?? "",
+  /** האתר הראשי, ודף המנוי בו */
+  RS_SITE_URL: (process.env.RS_SITE_URL || "https://www.rotman-safety.com").replace(/\/$/, ""),
+  RS_SUBSCRIBE_PATH: process.env.RS_SUBSCRIBE_PATH || "/pricing",
 };
 
 export const isProd = env.NODE_ENV === "production";
 export const hasS3 = Boolean(env.S3_BUCKET && env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY);
-export const hasCardcom = Boolean(env.CARDCOM_TERMINAL_NUMBER && env.CARDCOM_API_NAME);

@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "./db";
 import { env, isProd } from "./env";
 import type { User } from "./schema";
+import { rsStatus, type RsStatus } from "./rs";
 
 const COOKIE = "bk_session";
 const MAX_AGE_DAYS = 60;
@@ -44,25 +45,57 @@ export async function userFromRequest(req: Request): Promise<User | null> {
   }
 }
 
-/** האם למשתמש יש גישה ליצירת דוחות חדשים (ניסיון, מנוי בתוקף, או מנהל) */
-export function accessOf(u: User) {
+export type Access = {
+  admin: boolean;
+  /** מותר ליצור ולערוך דוחות */
+  active: boolean;
+  /** מקור הגישה: מנהל, מנוי רוטמן בטיחות, הארכה ידנית, ניסיון, או אין */
+  via: "admin" | "subscription" | "manual" | "trial" | "none";
+  /** עד מתי הגישה בתוקף (למנהל: null) */
+  until: string | null;
+  /** ימי ניסיון שנותרו (הגבוה מבין הניסיון כאן והניסיון באתר הראשי) */
+  trialLeft: number;
+  /** האם הבדיקה מול האתר הראשי הצליחה */
+  rsChecked: boolean;
+};
+
+const isOwner = (u: User) => Boolean(env.OWNER_EMAIL) && u.email.toLowerCase() === env.OWNER_EMAIL;
+
+/** מנהל המערכת (ניהול לקוחות) — רק לפי החשבון כאן */
+export const isAdminUser = (u: User) => u.isAdmin || isOwner(u);
+
+/**
+ * הגישה ליצירת דוחות: ביקורת שטח כלולה במנוי רוטמן בטיחות.
+ * מנוי פעיל באתר הראשי עם אותו מייל פותח גישה. בנוסף: מנהל, הארכה ידנית מהמנהל, או ניסיון.
+ */
+export function accessOf(u: User, rs: RsStatus): Access {
   const now = Date.now();
-  const owner = Boolean(env.OWNER_EMAIL) && u.email.toLowerCase() === env.OWNER_EMAIL;
-  const admin = u.isAdmin || owner;
-  const trialLeft = Math.max(0, Math.ceil((new Date(u.trialEndsAt).getTime() - now) / 86400000));
-  const paid = u.paidUntil ? new Date(u.paidUntil).getTime() > now : false;
-  const active = admin || paid || trialLeft > 0;
-  return {
-    admin,
-    active,
-    paid,
-    trialLeft,
-    paidUntil: u.paidUntil ? new Date(u.paidUntil).toISOString() : null,
-    plan: u.plan,
-  };
+  const days = (iso: string | null) => (iso ? Math.max(0, Math.ceil((new Date(iso).getTime() - now) / 86400000)) : 0);
+  const localTrial = u.trialEndsAt ? new Date(u.trialEndsAt).toISOString() : null;
+  const manual = u.paidUntil && new Date(u.paidUntil).getTime() > now ? new Date(u.paidUntil).toISOString() : null;
+  const rsTrial = rs.kind === "trial" ? rs.until : null;
+  const trialUntil = [localTrial, rsTrial].filter((d): d is string => Boolean(d) && new Date(d!).getTime() > now).sort().pop() ?? null;
+  const trialLeft = days(trialUntil);
+  const base = { trialLeft, rsChecked: rs.checked };
+
+  if (isAdminUser(u) || rs.kind === "admin") return { ...base, admin: isAdminUser(u), active: true, via: "admin", until: null };
+  const sub = rs.kind === "subscription" ? rs.until : null;
+  if (sub || manual) {
+    // אם יש גם מנוי וגם הארכה ידנית — מציגים את המאוחר מביניהם
+    const viaSub = Boolean(sub) && (!manual || sub! >= manual);
+    return { ...base, admin: false, active: true, via: viaSub ? "subscription" : "manual", until: viaSub ? sub : manual };
+  }
+  if (trialLeft > 0) return { ...base, admin: false, active: true, via: "trial", until: trialUntil };
+  return { ...base, admin: false, active: false, via: "none", until: null };
 }
 
-export function publicUser(u: User) {
+export async function accessFor(u: User, fresh = false): Promise<Access> {
+  // למנהל אין צורך לפנות לאתר הראשי
+  const rs = isAdminUser(u) ? ({ kind: "none", until: null, checked: true } as RsStatus) : await rsStatus(u.email, fresh);
+  return accessOf(u, rs);
+}
+
+export function publicUser(u: User, access: Access) {
   return {
     id: u.id,
     email: u.email,
@@ -76,6 +109,6 @@ export function publicUser(u: User) {
     brandColor: u.brandColor,
     hasLogo: Boolean(u.logoKey),
     logoVersion: u.logoKey ? u.logoKey.split("/").pop() : null,
-    access: accessOf(u),
+    access,
   };
 }

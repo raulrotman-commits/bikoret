@@ -13,7 +13,7 @@ import SitePage from "./pages/SitePage";
 import NewVisitPage from "./pages/NewVisitPage";
 import { OwnerReportPage, PublicReportPage } from "./pages/ReportPage";
 import SettingsPage from "./pages/SettingsPage";
-import { BillingPage, BillingResultPage } from "./pages/BillingPage";
+import { BillingPage } from "./pages/BillingPage";
 import AdminPage from "./pages/AdminPage";
 
 function Private({ children }: { children: JSX.Element }) {
@@ -46,8 +46,6 @@ export default function App() {
         <Route path="/visit/:id/report">{(p) => <Private><OwnerReportPage id={p.id} /></Private>}</Route>
         <Route path="/visit/:id">{(p) => <Private><Suspense fallback={<Spinner />}><VisitEditorPage id={p.id} /></Suspense></Private>}</Route>
         <Route path="/settings">{() => <Private><SettingsPage /></Private>}</Route>
-        <Route path="/billing/success">{() => <Private><BillingResultPage ok /></Private>}</Route>
-        <Route path="/billing/failed">{() => <Private><BillingResultPage ok={false} /></Private>}</Route>
         <Route path="/billing">{() => <Private><BillingPage /></Private>}</Route>
         <Route path="/admin">{() => <Private><AdminPage /></Private>}</Route>
         <Route>

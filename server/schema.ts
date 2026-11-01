@@ -102,6 +102,10 @@ export const findings = mysqlTable(
     likelihood: tinyint("likelihood"),
     severity: tinyint("severity"),
     workStopped: boolean("work_stopped").notNull().default(false),
+    /** סיבת הפסקת העבודה לפי התוספת הראשונה (1–11), כשממונה הבטיחות הורה על הפסקה */
+    stopReason: tinyint("stop_reason"),
+    /** מתי סומן שנשלחה הודעה למפקח העבודה האזורי (ISO) */
+    regulatorNotifiedAt: varchar("regulator_notified_at", { length: 32 }),
     deadlineDays: int("deadline_days"),
     carriedFromId: varchar("carried_from_id", { length: 36 }),
     recurring: boolean("recurring").notNull().default(false),
