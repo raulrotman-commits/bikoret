@@ -48,7 +48,7 @@ def marker_info(m: str):
 
 
 class Node:
-    __slots__ = ("key", "label", "mtype", "ord", "parent", "children", "lines", "heading", "repealed", "reg")
+    __slots__ = ("key", "label", "mtype", "ord", "parent", "children", "lines", "heading", "repealed", "reg", "superseded_children")
 
     def __init__(self, key, label, mtype, ordv, parent, reg):
         self.key = key          # מפתח מלא, למשל 9(א)(1)
@@ -61,6 +61,8 @@ class Node:
         self.heading = ""
         self.repealed = False
         self.reg = reg
+        # נוסח חדש של כל תקנת המשנה הופיע אחרי הפסקאות — הפסקאות הישנות אינן בתוקף
+        self.superseded_children = False
 
 
 def line_kind(t: str):
@@ -128,7 +130,35 @@ def parse(regkey: str, path: Path):
         if kind == "repealed" and not cur.lines and not cur.children:
             cur.repealed = True
         cur.lines.append((l, kind))
+    reassign_new_lines(nodes)
     return nodes
+
+
+def _overlap(a: str, b: str) -> float:
+    A, B = bigrams(words(a)), bigrams(words(b))
+    return len(A & B) / max(1, len(A))
+
+
+def reassign_new_lines(nodes):
+    """
+    בנוסח המשולב, נוסח חדש ("(החל מיום 16.10.2026): ...") של תקנת משנה שלמה מופיע לפעמים
+    אחרי הפסקה האחרונה שלה, ולכן הוצמד בטעות לפסקה. מעבירים אותו להורה כשהוא דומה לנוסח של ההורה
+    יותר מאשר לנוסח של הפסקה. דוגמה: תקנה 9(א) לתקנות עבודות בנייה.
+    """
+    for n in nodes:
+        if n.parent is None or len(n.lines) < 2:
+            continue
+        old_own = " ".join(t for t, k in n.lines if k != "new")
+        keep = []
+        for t, k in n.lines:
+            if k == "new" and keep:
+                p = n.parent
+                if _overlap(t, " ".join(x for x, kk in p.lines if kk != "new")) > _overlap(t, old_own):
+                    p.lines.append((t, k))
+                    p.superseded_children = True
+                    continue
+            keep.append((t, k))
+        n.lines = keep
 
 
 # ---------- נרמול טקסט ----------
@@ -238,6 +268,16 @@ def is_repealed(n):
     return any(a.repealed for a in anc_chain(n))
 
 
+def is_superseded(n):
+    """צומת שנמצא מתחת לתקנת משנה שהוחלפה כולה בנוסח חדש"""
+    a = n.parent
+    while a is not None:
+        if a.superseded_children:
+            return True
+        a = a.parent
+    return False
+
+
 index = []
 for n in all_nodes:
     chain = anc_chain(n)
@@ -248,6 +288,8 @@ for n in all_nodes:
     if len(ws) < 3:
         continue
     kinds = [k for x in subtree(n) for _, k in x.lines]
+    if is_superseded(n):
+        continue
     index.append({
         "node": n,
         "bg": bigrams(ws),
@@ -289,7 +331,9 @@ def match(desc: str, title: str):
     # עידון לפי נוסח הליקוי: אם הכותרת מצביעה על פסקה מסוימת בתוך הצומת
     T = content_set(title) - GENERIC_TITLE
     refined = node
-    if node.children and T:
+    # אם לתקנת המשנה נוסח חדש שהחליף אותה, הפסקאות הישנות שתחתיה אינן בתוקף — לא מעדנים אליהן
+    replaced = any(k == "new" for _, k in node.lines)
+    if node.children and T and not replaced:
         parent_words = content_set(own_text(node))
         cands = []
         for c in subtree(node)[1:]:
