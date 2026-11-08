@@ -52,9 +52,9 @@ export function BillingPage() {
         </div>
 
         <p className="mt-4 text-center text-[13px] text-navy-500">
-          שאלות על המנוי? כתבו לנו:{" "}
-          <a className="font-bold underline" href="mailto:raulr@Rotman-Safety.com" dir="ltr">
-            raulr@Rotman-Safety.com
+          שאלות על המנוי? וואטסאפ{" "}
+          <a className="font-bold underline" href="https://wa.me/972546017409" dir="ltr">
+            054-6017409
           </a>
         </p>
       </Page>
