@@ -33,7 +33,7 @@ log("signed up", email);
 // מיתוג
 await page.getByLabel("מס' רישיון / רישום").fill("108703");
 await page.getByLabel("שם החברה").fill("רוטמן בטיחות");
-await page.getByLabel("טלפון החברה").fill("054-2017006");
+await page.getByLabel("טלפון החברה").fill("050-1234567");
 await page.locator('input[type=file][accept^="image/png"]').setInputFiles("client/public/icon-512.png");
 await page.waitForTimeout(800);
 await shot(page, "02-settings");
